@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Analog Devices AD4692
+ * https://www.analog.com/en/products/ad4692.html
+ *
+ * Copyright (C) 2024 Analog Devices Inc.
+ */
+/dts-v1/;
+#include "zynq-coraz7s.dtsi"
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pwm/pwm.h>
+
+/ {
+
+	vref: regulator-vref {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-supply";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+
+	vio: regulator-vio {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-supply";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+};
+
+&fpga_axi {
+	ref_clk: axi-clkgen@0x44a70000 {
+		compatible = "adi,axi-clkgen-2.00.a";
+		reg = <0x44a70000 0x10000>;
+		#clock-cells = <0>;
+		clocks = <&clkc 15>, <&clkc 15>;
+		clock-names = "s_axi_aclk", "clkin1";
+		clock-output-names = "ref_clk";
+	};
+
+	axi_pwm_gen: pwm@0x44b00000 {
+		compatible = "adi,axi-pwmgen";
+		reg = <0x44b00000 0x1000>;
+		label = "adc_conversion_trigger";
+		#pwm-cells = <2>;
+		clocks = <&ref_clk>;
+	};
+};
+
+&spi0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	ad4692@0 {
+		compatible = "adi,ad4692";
+		reg = <0>;
+
+		spi-max-frequency = <1000000>;
+		vref-supply = <&vref>;
+		vio-supply = <&vio>;
+
+		reset-gpios = <&gpio0 87 GPIO_ACTIVE_LOW>;
+		gpiomode0-gpios = <&gpio0 86 GPIO_ACTIVE_LOW>;
+
+		clocks = <&ref_clk>;
+		pwms = <&axi_pwm_gen 0 0>;
+		pwm-names = "cnv";
+
+		interrupt-parent = <&gpio0>;
+		interrupts = <86 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-names = "DRDY";
+
+		adi,spi-mode = <2>;
+	};
+};

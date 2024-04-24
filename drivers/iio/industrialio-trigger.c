@@ -197,11 +197,14 @@ void iio_trigger_poll(struct iio_trigger *trig)
 	int i;
 
 	if (!atomic_read(&trig->use_count)) {
+		printk("atomic read\n");
 		atomic_set(&trig->use_count, CONFIG_IIO_CONSUMERS_PER_TRIGGER);
-
+		printk("atomic set\n");
 		for (i = 0; i < CONFIG_IIO_CONSUMERS_PER_TRIGGER; i++) {
-			if (trig->subirqs[i].enabled)
+			if (trig->subirqs[i].enabled) {
 				generic_handle_irq(trig->subirq_base + i);
+				printk("handle_irq\n");
+			}
 			else
 				iio_trigger_notify_done_atomic(trig);
 		}
@@ -534,6 +537,7 @@ static void iio_trig_subirqmask(struct irq_data *d)
 	struct irq_chip *chip = irq_data_get_irq_chip(d);
 	struct iio_trigger *trig = container_of(chip, struct iio_trigger, subirq_chip);
 
+	pr_err("disable_subirq");
 	trig->subirqs[d->irq - trig->subirq_base].enabled = false;
 }
 
@@ -542,6 +546,7 @@ static void iio_trig_subirqunmask(struct irq_data *d)
 	struct irq_chip *chip = irq_data_get_irq_chip(d);
 	struct iio_trigger *trig = container_of(chip, struct iio_trigger, subirq_chip);
 
+	pr_err("enable_subirq");
 	trig->subirqs[d->irq - trig->subirq_base].enabled = true;
 }
 
