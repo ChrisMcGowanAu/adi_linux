@@ -3566,13 +3566,21 @@ static int spi_nor_unlock_all(struct spi_nor *nor)
 static int spi_nor_init(struct spi_nor *nor)
 {
 	int err;
+        /* 
+        *  The original below if statement causes ALL models with SNOR_F_HAS_LOCK 
+        *  to fire. I think the original intention was just the 3 manufactuers listed
+        *  It now will only fire for the manufactures listed
+	*  For infineon S25FL512S the spi_nor_write_sr() below took 450ms
+	*  A power off when this was happening bricked the spi-nor device 
+        */
 
-	if (nor->jedec_id == CFI_MFR_ATMEL ||
-	    nor->jedec_id == CFI_MFR_INTEL ||
-	    nor->jedec_id == CFI_MFR_SST ||
-	    nor->flags & SNOR_F_HAS_LOCK) {
+	if ((nor->jedec_id == CFI_MFR_ATMEL ||
+	     nor->jedec_id == CFI_MFR_INTEL ||
+	     nor->jedec_id == CFI_MFR_SST) && 
+	     nor->flags & SNOR_F_HAS_LOCK) {
 		spi_nor_write_enable(nor);
 		nor->bouncebuf[0] = 0;
+		dev_info(nor->dev, "%s %d spi_nor_init() calling spi_nor_write_sr() with '0' and len 1\n",__FILE__,__LINE__);
 		spi_nor_write_sr(nor, nor->bouncebuf, 1);
 	}
 	err = spi_nor_quad_enable(nor);
